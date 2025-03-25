@@ -8,16 +8,26 @@ document.addEventListener("DOMContentLoaded", () => {
     { url: "https://picsum.photos/id/239/200/300" },
   ];
 
-  function downloadImage(image) {
+  function downloadImage(image, timeout = 5000) {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(`Failed to load image at ${image.url}`);
+      const timer = setTimeout(() => reject(`Timeout: Failed to load image at ${image.url}`), timeout);
+
+      img.onload = () => {
+        clearTimeout(timer);
+        resolve(img);
+      };
+      img.onerror = () => {
+        clearTimeout(timer);
+        reject(`Failed to load image at ${image.url}`);
+      };
       img.src = image.url;
     });
   }
 
   function downloadImages() {
+    if (document.getElementById("loading")) return; // Prevent multiple simultaneous clicks
+
     const loadingDiv = document.createElement("div");
     loadingDiv.id = "loading";
     loadingDiv.textContent = "Loading...";
@@ -27,20 +37,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     Promise.all(downloadPromises)
       .then((downloadedImages) => {
-        document.body.removeChild(loadingDiv);
         downloadedImages.forEach((img) => {
           output.appendChild(img);
         });
       })
       .catch((error) => {
-        document.body.removeChild(loadingDiv);
         const errorDiv = document.createElement("div");
         errorDiv.id = "error";
         errorDiv.textContent = error;
         document.body.appendChild(errorDiv);
+      })
+      .finally(() => {
+        // Always remove the loading spinner
+        document.body.removeChild(loadingDiv);
       });
   }
-
 
   btn.addEventListener("click", downloadImages);
 });
